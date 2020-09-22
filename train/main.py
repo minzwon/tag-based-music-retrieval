@@ -1,32 +1,52 @@
 import os
-import pickle
 import argparse
 from solver import Solver
-from data_loader import get_data_loader
+from pytorch_lightning import Trainer
+from pytorch_lightning.callbacks import ModelCheckpoint
+from pytorch_lightning.loggers.neptune import NeptuneLogger
 
 def main(config):
-    if not os.path.exists(config.model_save_path):
-        os.makedirs(config.model_save_path)
+	solver = Solver(config)
+	logger = NeptuneLogger(project_name=config.neptune_project, api_key=config.neptune_api_key)
+	checkpoint_callback = ModelCheckpoint(filepath=config.model_save_path,
+										  save_top_k=1,
+										  verbose=True,
+										  monitor="map",
+										  mode="max",
+										  prefix="")
+	trainer = Trainer(default_root_dir=config.model_save_path,
+					  gpus=config.gpu_id,
+					  logger=logger,
+					  checkpoint_callback=checkpoint_callback,
+					  max_epochs=config.n_epochs)
+	trainer.fit(solver)
+	trainer.save_checkpoint(os.path.join(config.model_save_path, 'last.ckpt'))
 
-    train_loader = get_data_loader(config)
-
-    solver = Solver(train_loader, config)
-    solver.train()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-    parser.add_argument('--n_epochs', type=int, default=1000)
-    parser.add_argument('--lr', type=float, default=0.001)
-    parser.add_argument('--margin', type=float, default=0.4)
-    parser.add_argument('--log_step', type=int, default=10)
-    parser.add_argument('--save_step', type=int, default=10)
-    parser.add_argument('--is_cuda', type=bool, default=True)
+    parser.add_argument('--num_workers', type=int, default=4)
+
+    # model parameters
     parser.add_argument('--batch_size', type=int, default=64)
-    parser.add_argument('--model_save_path', type=str, default='./model')
+    parser.add_argument('--margin', type=float, default=0.4)
+    parser.add_argument('--input_type', type=str, default='spec', choices=['spec', 'cf', 'hybrid'])
+    parser.add_argument('--w2v_type', type=str, default='google', choices=['google', 'music'])
+    parser.add_argument('--is_balanced', type=bool, default=False)
+    parser.add_argument('--is_weighted', type=bool, default=False)
+
+    # training parameters
+    parser.add_argument('--n_epochs', type=int, default=200)
+    parser.add_argument('--gpu_id', type=str, default='0')
+    parser.add_argument('--lr', type=float, default=1e-4)
+    parser.add_argument('--model_save_path', type=str, default='./checkpoints')
     parser.add_argument('--model_load_path', type=str, default='.')
-    parser.add_argument('--data_path', type=str, default='/home/minz/ssd2/dataset/msd/')
+    parser.add_argument('--data_path', type=str, default='.')
+    parser.add_argument('--neptune_project', type=str, default='.')
+    parser.add_argument('--neptune_api_key', type=str, default='.')
 
     config = parser.parse_args()
+
     print(config)
     main(config)

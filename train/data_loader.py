@@ -1,40 +1,116 @@
 import os
 import sys
+import pickle
+import tqdm
 import numpy as np
 import pandas as pd
 import random
-import pickle
-import tqdm
 from torch.utils import data
 
-class DataLoader(data.Dataset):
-    def __init__(self, data_path):
-        print('loading..')
-        self.data_path = data_path
-        self.d = pickle.load(open(os.path.join(data_path, 'cross_modal/cross_modal_dict.pkl'), 'rb'))
-        self.tags = list(self.d.keys())
-        print('loaded!')
 
-    def load_spec(self, song_id):
-        fn = os.path.join(self.data_path, 'spec_clean', song_id[2], song_id[3], song_id[4], song_id+'.npy')
-        length = 256
-        spec = np.load(fn)
-        random_ix = int(np.floor(np.random.random(1) * (spec.shape[1] - length)))
-        spec = spec[:, random_ix:random_ix+length]
-        return spec
+class MyDataset(data.Dataset):
+	def __init__(self, data_path, split='TRAIN', input_type='spec', w2v_type='google', is_balanced=True):
+		self.data_path = data_path
+		self.split = split
+		self.input_type = input_type
+		self.is_balanced = is_balanced
+		self.w2v_type = w2v_type
 
-    def __getitem__(self, index):
-        tag = self.tags[index % len(self.tags)]
-        pos_song, neg_song, anchor_emb = random.sample(self.d[tag]['pos_train'], 1)[0], random.sample(self.d[tag]['neg_train'], 1)[0], self.d[tag]['emb']
-        pos_spec = self.load_spec(pos_song).astype('float32')
-        neg_spec = self.load_spec(neg_song).astype('float32')
-        return anchor_emb, pos_spec, neg_spec
+		# load ids
+		if split == 'TRAIN':
+			self.tag_to_ix = pickle.load(open(os.path.join(data_path, 'train_tag_to_ix.pkl'), 'rb'))
+			self.train_ids = np.load(os.path.join(data_path, 'train_ids.npy'))
+			self.get_tag_binaries()
+		elif split == 'VALID':
+			self.valid_pairs = np.load(os.path.join(data_path, 'valid_pairs.npy'))
 
-    def __len__(self):
-        return 5000
+		# load binaries
+		self.ix_to_binary = np.load(os.path.join(data_path, 'binaries.npy'))
+
+		# load tag embedding
+		self.load_tag_emb()
+
+		# load collaborative filtering embedding
+		if input_type != 'spec':
+			self.cf = np.load(os.path.join(data_path, 'ix_to_cf.npy'))
+
+	def get_tag_binaries(self):
+		eye = np.eye(len(self.tag_to_ix))
+		self.tag_binaries = {}
+		for i, tag in enumerate(self.tag_to_ix.keys()):
+			self.tag_binaries[tag] = eye[i]
+
+	def load_tag_emb(self):
+		self.tags = np.load(os.path.join(self.data_path, 'tags.npy'))
+		self.w2v = pickle.load(open(os.path.join(self.data_path, '%s_emb.pkl'%self.w2v_type), 'rb'))
+
+	def load_cf(self, song_ix):
+		return self.cf[song_ix]
+
+	def load_spec(self, song_id):
+		return np.zeros((256, 271))
+		fn = os.path.join(self.data_path, 'spec_clean', song_id[2], song_id[3], song_id[4], song_id+'.npy')
+		length = 271
+		spec = np.load(fn)
+		if self.split == 'TRAIN':
+			time_ix = int(np.floor(np.random.random(1) * (spec.shape[1] - length)))
+		elif self.split == 'VALID':
+			time_ix = int((spec.shape[1] - length)//2)
+		spec = spec[:, time_ix:time_ix+length]
+		return spec
+
+	def load_hybrid(self, song_ix, song_id):
+		spec = self.load_spec(song_id)
+		cf = self.load_cf(song_ix)
+		return spec, cf
+
+	def get_train_item(self, index):
+		# tag embedding
+		tag = self.tags[index % len(self.tags)]
+		tag_binary = self.tag_binaries[tag]
+		tag_emb = self.w2v[tag]
+
+		# song embedding
+		if self.is_balanced:
+			song_ix, song_id = random.choice(self.tag_to_ix[tag]).split('//')
+		else:
+			song_ix, song_id = random.choice(self.train_ids).split('//')
+		song_ix = int(song_ix)
+		song_binary = self.ix_to_binary[song_ix]
+		if self.input_type == 'spec':
+			spec = self.load_spec(song_id)
+			cf = np.array([])
+		elif self.input_type == 'cf':
+			spec = np.array([])
+			cf = self.load_cf(song_ix)
+		elif self.input_type == 'hybrid':
+			spec, cf = self.load_hybrid(song_ix, song_id)
+		return tag_emb, spec, cf, tag_binary, song_binary
+
+	def get_valid_item(self, index):
+		song_ix, song_id, tag = self.valid_pairs[index].split('//')
+		song_ix = int(song_ix)
+		tag_emb = self.w2v[tag]
+		if self.input_type == 'spec':
+			spec = self.load_spec(song_id)
+			cf = np.array([])
+		elif self.input_type == 'cf':
+			spec = np.array([])
+			cf = self.load_cf(song_ix)
+		elif self.input_type == 'hybrid':
+			spec, cf = self.load_hybrid(song_ix)
+		song_binary = np.array([])
+		tag_binary = np.array([])
+		return tag_emb, spec, cf, tag_binary, song_binary
+
+	def __getitem__(self, index):
+		if self.split == 'TRAIN':
+			tag_emb, spec, cf, tag_binary, song_binary = self.get_train_item(index)
+		elif self.split == 'VALID':
+			tag_emb, spec, cf, tag_binary, song_binary = self.get_valid_item(index)
+		return tag_emb.astype('float32'), spec.astype('float32'), cf.astype('float32'), tag_binary, song_binary
+
+	def __len__(self):
+		return 5000
 
 
-def get_data_loader(config):
-    data_loader = data.DataLoader(dataset=DataLoader(config.data_path),
-                                    batch_size=config.batch_size, shuffle=True, drop_last=True)
-    return data_loader
