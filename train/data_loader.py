@@ -9,10 +9,12 @@ from torch.utils import data
 
 
 class MyDataset(data.Dataset):
-	def __init__(self, data_path, split='TRAIN', input_type='spec', w2v_type='google', is_balanced=True):
+	def __init__(self, data_path, split='TRAIN', input_type='spec', input_length=None, num_chunk=16, w2v_type='google', is_balanced=True):
 		self.data_path = data_path
 		self.split = split
 		self.input_type = input_type
+		self.input_length = input_length
+		self.num_chunk = num_chunk
 		self.is_balanced = is_balanced
 		self.w2v_type = w2v_type
 
@@ -22,7 +24,7 @@ class MyDataset(data.Dataset):
 			self.train_ids = np.load(os.path.join(data_path, 'train_ids.npy'))
 			self.get_tag_binaries()
 		elif split == 'VALID':
-			self.valid_pairs = np.load(os.path.join(data_path, 'valid_pairs.npy'))
+			self.valid_ids = np.load(os.path.join(data_path, 'valid_ids.npy'))
 
 		# load binaries
 		self.ix_to_binary = np.load(os.path.join(data_path, 'binaries.npy'))
@@ -48,15 +50,23 @@ class MyDataset(data.Dataset):
 		return self.cf[song_ix]
 
 	def load_spec(self, song_id):
-		return np.zeros((256, 271))
-		fn = os.path.join(self.data_path, 'spec_clean', song_id[2], song_id[3], song_id[4], song_id+'.npy')
-		length = 271
+		fn = os.path.join(self.data_path, 'spec', song_id[2], song_id[3], song_id[4], song_id+'.npy')
+		length = self.input_length
 		spec = np.load(fn)
+
+		# for short spectrograms
+		if spec.shape[1] < self.input_length:
+			nspec = np.zeros((128, self.input_length))
+			nspec[:, :spec.shape[1]] = spec
+			spec = nspec
+
+		# multiple chunks for validation loader
 		if self.split == 'TRAIN':
 			time_ix = int(np.floor(np.random.random(1) * (spec.shape[1] - length)))
+			spec = spec[:, time_ix:time_ix+length]
 		elif self.split == 'VALID':
-			time_ix = int((spec.shape[1] - length)//2)
-		spec = spec[:, time_ix:time_ix+length]
+			hop = (spec.shape[1] - self.input_length) // self.num_chunk
+			spec = np.array([spec[:, i*hop:i*hop+self.input_length] for i in range(self.num_chunk)])
 		return spec
 
 	def load_hybrid(self, song_ix, song_id):
@@ -88,9 +98,9 @@ class MyDataset(data.Dataset):
 		return tag_emb, spec, cf, tag_binary, song_binary
 
 	def get_valid_item(self, index):
-		song_ix, song_id, tag = self.valid_pairs[index].split('//')
+		song_ix, song_id = self.valid_ids[index].split('//')
 		song_ix = int(song_ix)
-		tag_emb = self.w2v[tag]
+		tag_emb = np.array([])
 		if self.input_type == 'spec':
 			spec = self.load_spec(song_id)
 			cf = np.array([])
@@ -98,7 +108,7 @@ class MyDataset(data.Dataset):
 			spec = np.array([])
 			cf = self.load_cf(song_ix)
 		elif self.input_type == 'hybrid':
-			spec, cf = self.load_hybrid(song_ix)
+			spec, cf = self.load_hybrid(song_ix, song_id)
 		song_binary = np.array([])
 		tag_binary = np.array([])
 		return tag_emb, spec, cf, tag_binary, song_binary
@@ -111,6 +121,9 @@ class MyDataset(data.Dataset):
 		return tag_emb.astype('float32'), spec.astype('float32'), cf.astype('float32'), tag_binary, song_binary
 
 	def __len__(self):
-		return 5000
+		if self.split == 'TRAIN':
+			return 10000
+		elif self.split == 'VALID':
+			return len(self.valid_ids)
 
 

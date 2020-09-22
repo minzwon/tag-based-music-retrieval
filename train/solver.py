@@ -35,6 +35,8 @@ class Solver(LightningModule):
 		self.lr = config.lr
 		self.data_path = config.data_path
 		self.batch_size = config.batch_size
+		self.num_chunk = config.num_chunk
+		self.input_length = config.input_length
 		self.num_workers = config.num_workers
 		self.input_type = config.input_type
 		self.w2v_type = config.w2v_type
@@ -55,6 +57,8 @@ class Solver(LightningModule):
 		elif config.input_type=='hybrid':
 			self.model = HybridModel()
 
+		self.song_embs = []
+
 	def load_valid_data(self, data_path, w2v_type):
 		# get w2v word embedding
 		emb_dict = pickle.load(open(os.path.join(data_path, '%s_emb.pkl'%w2v_type), 'rb'))
@@ -72,8 +76,7 @@ class Solver(LightningModule):
 
 	def configure_optimizers(self):
 		optimizer = torch.optim.Adam(self.model.parameters(), lr=self.lr, weight_decay=1e-4)
-		scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, "min")
-		return [optimizer], [scheduler]
+		return optimizer
 
 	def train_loss(self, anchor, positive, negative):
 		return self.triplet_loss(anchor, positive, negative)
@@ -84,13 +87,14 @@ class Solver(LightningModule):
 
 	def train_dataloader(self):
 		return DataLoader(dataset=MyDataset(self.data_path, split='TRAIN', input_type=self.input_type, 
-											w2v_type=self.w2v_type, is_balanced=self.is_balanced), 
+											input_length=self.input_length, w2v_type=self.w2v_type, is_balanced=self.is_balanced), 
 						  batch_size=self.batch_size, shuffle=True, drop_last=False, num_workers=self.num_workers)
 
 	def val_dataloader(self):
 		return DataLoader(dataset=MyDataset(self.data_path, split='VALID', input_type=self.input_type,
-										    w2v_type=self.w2v_type, is_balanced=self.is_balanced),
-						  batch_size=self.batch_size, shuffle=False, drop_last=False, num_workers=self.num_workers)
+											input_length=self.input_length, num_chunk=self.num_chunk,
+											w2v_type=self.w2v_type, is_balanced=self.is_balanced),
+						  batch_size=self.batch_size//self.num_chunk, shuffle=False, drop_last=False, num_workers=self.num_workers)
 
 	def training_step(self, batch, batch_idx):
 		tag, spec, cf, tag_binary, song_binary = batch
@@ -105,31 +109,52 @@ class Solver(LightningModule):
 		return {"loss": avg_loss}
 
 	def validation_step(self, batch, batch_idx):
-		tag, spec, cf, _, _ = batch
-		tag_emb, song_emb = self.model.forward(tag, spec, cf)
-		loss = self.valid_loss(tag_emb, song_emb)
-		logs = {"loss": loss}
-		return {"val_loss": loss,
-				"log": logs}
+		_, spec, cf, _, _ = batch
+		song_emb = self.song_to_emb(spec, cf)
+		self.song_embs.append(song_emb)
 
 	def validation_epoch_end(self, outputs):
-		p_10, roc_auc, ap = self.custom_validation()
-		avg_loss = torch.stack([x["val_loss"] for x in outputs]).mean()
-		tensorboard_logs = {"val_loss": avg_loss,
-							"p@10": p_10,
+		tag_embs = self.tags_to_emb()
+		song_embs = torch.cat(self.song_embs, dim=0)
+
+		# ignore unit test
+		if song_embs.size(0) < self.batch_size:
+			p_10, roc_auc, ap = torch.tensor(0), torch.tensor(0), torch.tensor(0)
+		else:
+			p_10, roc_auc, ap = self.get_scores(tag_embs, song_embs)
+		tensorboard_logs = {"p@10": p_10,
 							"roc_auc": roc_auc,
 							"map": ap}
-		return {"avg_val_loss": avg_loss, 
-				"p@10": p_10,
+		self.song_embs = []
+		return {"p@10": p_10,
 				"roc_auc": roc_auc,
 				"map": ap,
 				"log": tensorboard_logs}
 
-	# functions for custom validation
-	def custom_validation(self):
-		tag_embs = self.tags_to_emb()
-		song_embs = self.song_to_emb()
+	def tags_to_emb(self):
+		tag_emb = self.model.word_to_embedding(self.word_emb).detach().cpu()
+		return tag_emb
 
+	def song_to_emb(self, spec, cf):
+		if self.input_type == 'spec':
+			b, c, f, t = spec.size()
+			out = self.model.spec_to_embedding(spec.view(-1, f, t))
+			out = out.view(b, c, -1)
+			song_emb = out.mean(dim=1).detach().cpu()
+		elif self.input_type == 'cf':
+			song_emb = self.model.cf_to_embedding(cf).detach().cpu()
+		elif self.input_type == 'hybrid':
+			b, c, f, t = spec.size()
+			out = self.model.spec_to_embedding(spec.view(-1, f, t))
+			out = out.view(b, c, -1)
+			spec_emb = out.mean(dim=1)
+#			cf_emb = self.model.cf_to_embedding(cf)
+			cat_emb = torch.cat([spec_emb, cf], dim=-1)
+			song_emb = self.model.cat_to_embedding(cat_emb).detach().cpu()
+		return song_emb
+
+	# evaluation metrics
+	def get_scores(self, tag_embs, song_embs):
 		# get similarity score (tag x song)
 		sim_scores = self.get_similarity(tag_embs, song_embs)
 
@@ -146,27 +171,6 @@ class Solver(LightningModule):
 		for i, tag in enumerate(self.tags):
 			print('%s: %.1f, %.4f, %.4f' % (tag, p_ks[i], roc_aucs[i], aps[i]))
 		return torch.tensor(np.mean(p_ks)), torch.tensor(np.mean(roc_aucs)), torch.tensor(np.mean(aps))
-
-	def tags_to_emb(self):
-		tag_emb = self.model.word_to_embedding(self.word_emb).detach().cpu()
-		return tag_emb
-
-	def song_to_emb(self):
-		if self.input_type == 'spec':
-		    return 0
-		elif self.input_type == 'cf':
-			embs = []
-			for i in tqdm.tqdm(range(len(self.valid_ids)//self.batch_size)):
-				inp = torch.tensor(self.ix_to_cf[i * self.batch_size:(i+1) * self.batch_size]).cuda()
-				out = self.model.cf_to_embedding(inp).detach().cpu()
-				embs.append(out)
-			inp = torch.tensor(self.ix_to_cf[(i+1) * self.batch_size:]).cuda()
-			out = self.model.cf_to_embedding(inp).detach().cpu()
-			embs.append(out)
-			song_embs = torch.cat(embs, dim=0)
-			return song_embs
-		elif self.input_type == 'hybrid':
-			return 0
 
 	def get_similarity(self, tag_embs, song_embs):
 		sim_scores = np.zeros((len(tag_embs), len(song_embs)))
@@ -208,3 +212,82 @@ class Solver(LightningModule):
 		return tag_emb, song_emb, negative_emb
 
 
+
+
+
+
+
+
+
+#
+#	# functions for custom validation
+#
+#	def tags_to_emb(self):
+#		tag_emb = self.model.word_to_embedding(self.word_emb).detach().cpu()
+#		return tag_emb
+#
+#	def song_to_emb(self):
+#		if self.input_type == 'spec':
+#			song_embs = self.spec_to_emb()
+#		elif self.input_type == 'cf':
+#			song_embs = self.cf_to_emb()
+#		elif self.input_type == 'hybrid':
+#			spec_emb = self.spec_to_emb()
+#			cf_emb = self.cf_to_emb()
+#			cat_emb = torch.concatenate([spec_emb, cf_emb], dim=-1)
+#			song_embs = self.model.cat_to_embedding(cat_emb)
+#		return song_embs
+#
+#	def spec_to_emb(self):
+#		embs = []
+#		valid_ids = [line.split('//')[1] for line in self.valid_ids]
+#		valid_batch_size = self.batch_size // self.num_chunks
+#		num_iter = len(valid_ids) // valid_batch_size
+#		for i in tqdm.tqdm(range(num_iter)):
+#			ids = valid_ids[i*valid_batch_size:(i+1)*valid_batch_size]
+#			valid_batch = self.get_valid_batch(ids)
+#			out = self.model.spec_to_embedding(valid_batch).detach().cpu()
+#			out = self.merge_chunk_prd(out)
+#			embs.append(out)
+#		ids = valid_ids[i*valid_batch_size:]
+#		valid_batch = self.get_valid_batch(ids)
+#		out = self.model.spec_to_embedding(valid_batch).detach().cpu()
+#		out = self.merge_chunk_prd(out)
+#		embs.append(out)
+#		song_embs = torch.cat(embs, dim=0)
+#		return song_embs
+#
+#	def get_valid_batch(self, ids):
+#		specs = []
+#		for msd_id in ids:
+#			spec = np.load(os.path.join(self.data_path, 'spec', msd_id[2], msd_id[3], msd_id[4], msd_id+'.npy'))
+#			if spec.shape[1] < self.input_length:
+#				nspec = np.zeros((128, self.input_length))
+#				nspec[:, :spec.shape[1]] = spec
+#				spec = nspec
+#			hop = (spec.shape[1] - self.input_length) // self.num_chunks
+#			chunks = torch.tensor([spec[:, i*hop:i*hop+self.input_length] for i in range(self.num_chunks)])
+#			specs.append(chunks)
+#		valid_batch = torch.cat(specs, dim=0)
+#		return valid_batch.cuda()
+#
+#	def merge_chunk_prd(self, out):
+#		song_level_out = []
+#		num_iter = out.size(1) // self.num_chunks
+#		for i in range(num_iter):
+#			song_prd = out[i*self.num_chunks:(i+1)*self.num_chunks].mean(dim=0).unsqueeze(0)
+#			song_level_out.append(song_prd)
+#		return torch.cat(song_level_out, dim=0)
+#
+#	def cf_to_emb(self):
+#		embs = []
+#		for i in tqdm.tqdm(range(len(self.valid_ids)//self.batch_size)):
+#			inp = torch.tensor(self.ix_to_cf[i * self.batch_size:(i+1) * self.batch_size]).cuda()
+#			out = self.model.cf_to_embedding(inp).detach().cpu()
+#			embs.append(out)
+#		inp = torch.tensor(self.ix_to_cf[(i+1) * self.batch_size:]).cuda()
+#		out = self.model.cf_to_embedding(inp).detach().cpu()
+#		embs.append(out)
+#		song_embs = torch.cat(embs, dim=0)
+#		return song_embs
+#

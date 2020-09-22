@@ -1,1 +1,5 @@
 *.pyc
+train/checkpoints/*
+train/logs/*
+train/__pycache__/*
+

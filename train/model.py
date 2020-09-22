@@ -112,6 +112,11 @@ class HybridModel(nn.Module):
 		self.layer7 = Conv_2d(256, 512, pooling=2)
 		self.layer8 = Conv_emb(512, 200)
 
+		# FC module for collaborative filtering embedding
+#		self.cf_fc1 = nn.Linear(200, 512)
+#		self.cf_bn1 = nn.BatchNorm1d(512)
+#		self.cf_fc2 = nn.Linear(512, 256)
+
 		# FC module for concatenated embedding
 		self.cat_fc1 = nn.Linear(400, 512)
 		self.cat_bn1 = nn.BatchNorm1d(512)
@@ -125,10 +130,11 @@ class HybridModel(nn.Module):
 		self.relu = nn.ReLU()
 		self.dropout = nn.Dropout(0.5)
 
-	def audio_to_embedding(self, spec, cf):
-		# CNN
+	def spec_to_embedding(self, spec):
 		out = spec.unsqueeze(1)
 		out = self.spec_bn(out)
+
+		# CNN
 		out = self.layer1(out)
 		out = self.layer2(out)
 		out = self.layer3(out)
@@ -140,16 +146,36 @@ class HybridModel(nn.Module):
 		out = out.squeeze(2)
 		out = nn.MaxPool1d(out.size(-1))(out)
 		out = out.view(out.size(0), -1)
+		return out
 
-		# concatenate
-		out = torch.cat([out, cf], dim=-1)
+	def cf_to_embedding(self, cf):
+		out = self.cf_fc1(cf)
+		out = self.cf_bn1(out)
+		out = self.relu(out)
+		out = self.dropout(out)
+		out = self.cf_fc2(out)
+		return out
 
-		# fully connected
-		out = self.cat_fc1(out)
+	def cat_to_embedding(self, cat):
+		out = self.cat_fc1(cat)
 		out = self.cat_bn1(out)
 		out = self.relu(out)
 		out = self.dropout(out)
 		out = self.cat_fc2(out)
+		return out
+
+	def song_to_embedding(self, spec, cf):
+		# spec to embedding
+		out_spec = self.spec_to_embedding(spec)
+
+		# cf to embedding
+#		out_cf = self.cf_to_embedding(cf)
+
+		# concatenate
+		out = torch.cat([out_spec, cf], dim=-1)
+
+		# fully connected
+		out = self.cat_to_embedding(out)
 		return out
 
 	def word_to_embedding(self, emb):
@@ -162,7 +188,7 @@ class HybridModel(nn.Module):
 
 	def forward(self, tag, spec, cf):
 		tag_emb = self.word_to_embedding(tag)
-		song_emb = self.audio_to_embedding(spec, cf)
+		song_emb = self.song_to_embedding(spec, cf)
 		return tag_emb, song_emb
 
 

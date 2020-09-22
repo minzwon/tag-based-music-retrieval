@@ -2,6 +2,7 @@ import os
 import tqdm
 import pickle
 import random
+import glob
 import numpy as np
 import pandas as pd
 import gensim.downloader as api
@@ -16,13 +17,15 @@ df = pd.read_csv(filename, sep='\t', names=['id', 'tag', 'merged', 'type', 'scor
 w2v = api.load('word2vec-google-news-300')
 
 # get only exsisting item
-# to be added
+existing_path = glob.glob(os.path.join(root, 'spec/*/*/*/*.npy'))
+existing_ids = [line.split('/')[-1][:-4] for line in existing_path]
+df = df[df.id.isin(existing_ids)]
 
 # score threshold
 df = df[df.score>=60]
 
 # get top 50 tags
-top100 = Counter(df.merged).most_common(100)
+top100 = Counter(df.merged).most_common(200)
 tags = [line[0] for line in top100]
 available_tags = []
 for tag in tags:
@@ -31,8 +34,10 @@ for tag in tags:
 		available_tags.append(tag)
 	except KeyError:
 		continue
-assert len(available_tags) > 50
-tags = available_tags[:50]
+assert len(available_tags) > 100
+tags = available_tags[:100]
+for tag in tags:
+	print(tag)
 df = df[df.merged.isin(tags)]
 
 # id to binary
@@ -75,7 +80,7 @@ def split(threshold=100):
 			is_run = False
 	return train_ix, valid_ix, test_ix
 
-train_ix, valid_ix, test_ix = split()
+train_ix, valid_ix, test_ix = split(threshold=15)
 train_ids = ['%s//%s'%(ix, ids[ix]) for ix in train_ix]
 valid_ids = ['%s//%s'%(ix, ids[ix]) for ix in valid_ix]
 test_ids = ['%s//%s'%(ix, ids[ix]) for ix in test_ix]
@@ -94,21 +99,4 @@ for ix in train_ix:
 		if is_tag:
 			train_tag_to_ix[tags[ti]].append('%s//%s'%(ix, ids[ix]))
 pickle.dump(train_tag_to_ix, open(os.path.join(root, 'train_tag_to_ix.pkl'), 'wb'))
-
-# get validation pairs (sorted_ix//msd_id//tag)
-valid_pairs = []
-valid_ids = [line.split('//')[1] for line in valid_ids]
-id_to_ix = {ids[i]: i for i in range(len(ids))}
-for tag in tags:
-	subset = list(set(df[df.merged==tag].id).intersection(set(valid_ids)))
-	try:
-		print('%s: %d' % (tag, len(subset)))
-		songs = random.sample(subset, 100)
-	except ValueError:
-		print('%s has only %d samples in validation set.' % (tag, len(subset)))
-		songs = random.choices(subset, k=100)
-	sampled_ix = [id_to_ix[msd_id] for msd_id in songs]
-	for i, song in enumerate(songs):
-		valid_pairs.append('%s//%s//%s'%(sampled_ix[i], song, tag))
-np.save(open(os.path.join(root, 'valid_pairs.npy'), 'wb'), valid_pairs)
 

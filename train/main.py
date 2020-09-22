@@ -29,7 +29,9 @@ if __name__ == '__main__':
     parser.add_argument('--num_workers', type=int, default=4)
 
     # model parameters
-    parser.add_argument('--batch_size', type=int, default=64)
+    parser.add_argument('--batch_size', type=int, default=128)
+    parser.add_argument('--num_chunk', type=int, default=16)
+    parser.add_argument('--input_length', type=int, default=271)
     parser.add_argument('--margin', type=float, default=0.4)
     parser.add_argument('--input_type', type=str, default='spec', choices=['spec', 'cf', 'hybrid'])
     parser.add_argument('--w2v_type', type=str, default='google', choices=['google', 'music'])
