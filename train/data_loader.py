@@ -24,7 +24,9 @@ class MyDataset(data.Dataset):
 			self.train_ids = np.load(os.path.join(data_path, 'train_ids.npy'))
 			self.get_tag_binaries()
 		elif split == 'VALID':
-			self.valid_ids = np.load(os.path.join(data_path, 'valid_ids.npy'))
+			self.eval_ids = np.load(os.path.join(data_path, 'valid_ids.npy'))
+		elif split == 'TEST':
+			self.eval_ids = np.load(os.path.join(data_path, 'test_ids.npy'))
 
 		# load binaries
 		self.ix_to_binary = np.load(os.path.join(data_path, 'binaries.npy'))
@@ -64,7 +66,7 @@ class MyDataset(data.Dataset):
 		if self.split == 'TRAIN':
 			time_ix = int(np.floor(np.random.random(1) * (spec.shape[1] - length)))
 			spec = spec[:, time_ix:time_ix+length]
-		elif self.split == 'VALID':
+		elif (self.split == 'VALID') or (self.split == 'TEST'):
 			hop = (spec.shape[1] - self.input_length) // self.num_chunk
 			spec = np.array([spec[:, i*hop:i*hop+self.input_length] for i in range(self.num_chunk)])
 		return spec
@@ -97,8 +99,8 @@ class MyDataset(data.Dataset):
 			spec, cf = self.load_hybrid(song_ix, song_id)
 		return tag_emb, spec, cf, tag_binary, song_binary
 
-	def get_valid_item(self, index):
-		song_ix, song_id = self.valid_ids[index].split('//')
+	def get_eval_item(self, index):
+		song_ix, song_id = self.eval_ids[index].split('//')
 		song_ix = int(song_ix)
 		tag_emb = np.array([])
 		if self.input_type == 'spec':
@@ -116,14 +118,14 @@ class MyDataset(data.Dataset):
 	def __getitem__(self, index):
 		if self.split == 'TRAIN':
 			tag_emb, spec, cf, tag_binary, song_binary = self.get_train_item(index)
-		elif self.split == 'VALID':
-			tag_emb, spec, cf, tag_binary, song_binary = self.get_valid_item(index)
+		elif (self.split == 'VALID') or (self.split == 'TEST'):
+			tag_emb, spec, cf, tag_binary, song_binary = self.get_eval_item(index)
 		return tag_emb.astype('float32'), spec.astype('float32'), cf.astype('float32'), tag_binary, song_binary
 
 	def __len__(self):
 		if self.split == 'TRAIN':
 			return 10000
-		elif self.split == 'VALID':
-			return len(self.valid_ids)
+		elif (self.split == 'VALID') or (self.split == 'TEST'):
+			return len(self.eval_ids)
 
 

@@ -1,5 +1,5 @@
 *.pyc
-train/checkpoints/*
-train/logs/*
-train/__pycache__/*
+*.ckpt
+*.out
+*/__pycache__/*
 
