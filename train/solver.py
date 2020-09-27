@@ -225,101 +225,29 @@ class Solver(LightningModule):
 	def get_ap(self, sim_scores):
 		return metrics.average_precision_score(self.ground_truth, sim_scores.T, average=None)
 
-	# triplet sampling
 	def triplet_sampling(self, tag_emb, song_emb, tag_binary, song_binary):
 		num_batch = len(tag_emb)
 		if self.is_weighted:
+			# get distance weights
 			tag_norm = tag_emb / tag_emb.norm(dim=1)[:, None]
 			song_norm = song_emb / song_emb.norm(dim=1)[:, None]
 			dot_sim = torch.matmul(tag_norm, song_norm.T)
 			weights = (dot_sim + 1) / 2
+
+			# masking
 			mask = 1 - torch.matmul(tag_binary, song_binary.T)
 			masked_weights = weights * mask
+
+			# sampling
 			index_array = torch.arange(num_batch)
 			negative_ix = [random.choices(index_array, weights=masked_weights[i], k=1)[0].item() for i in range(num_batch)]
 		else:
+			# masking
+			mask = 1 - torch.matmul(tag_binary, song_binary.T)
+
+			# sampling
 			index_array = torch.arange(num_batch)
-			negative_ix = [random.choice(index_array) for _ in range(num_batch)] 
+			negative_ix = [random.choices(index_array, weights=mask[i], k=1)[0].item() for i in range(num_batch)] 
 		negative_emb = song_emb[negative_ix]
 		return tag_emb, song_emb, negative_emb
 
-
-
-
-
-
-
-
-
-#
-#	# functions for custom validation
-#
-#	def tags_to_emb(self):
-#		tag_emb = self.model.word_to_embedding(self.word_emb).detach().cpu()
-#		return tag_emb
-#
-#	def song_to_emb(self):
-#		if self.input_type == 'spec':
-#			song_embs = self.spec_to_emb()
-#		elif self.input_type == 'cf':
-#			song_embs = self.cf_to_emb()
-#		elif self.input_type == 'hybrid':
-#			spec_emb = self.spec_to_emb()
-#			cf_emb = self.cf_to_emb()
-#			cat_emb = torch.concatenate([spec_emb, cf_emb], dim=-1)
-#			song_embs = self.model.cat_to_embedding(cat_emb)
-#		return song_embs
-#
-#	def spec_to_emb(self):
-#		embs = []
-#		valid_ids = [line.split('//')[1] for line in self.valid_ids]
-#		valid_batch_size = self.batch_size // self.num_chunks
-#		num_iter = len(valid_ids) // valid_batch_size
-#		for i in tqdm.tqdm(range(num_iter)):
-#			ids = valid_ids[i*valid_batch_size:(i+1)*valid_batch_size]
-#			valid_batch = self.get_valid_batch(ids)
-#			out = self.model.spec_to_embedding(valid_batch).detach().cpu()
-#			out = self.merge_chunk_prd(out)
-#			embs.append(out)
-#		ids = valid_ids[i*valid_batch_size:]
-#		valid_batch = self.get_valid_batch(ids)
-#		out = self.model.spec_to_embedding(valid_batch).detach().cpu()
-#		out = self.merge_chunk_prd(out)
-#		embs.append(out)
-#		song_embs = torch.cat(embs, dim=0)
-#		return song_embs
-#
-#	def get_valid_batch(self, ids):
-#		specs = []
-#		for msd_id in ids:
-#			spec = np.load(os.path.join(self.data_path, 'spec', msd_id[2], msd_id[3], msd_id[4], msd_id+'.npy'))
-#			if spec.shape[1] < self.input_length:
-#				nspec = np.zeros((128, self.input_length))
-#				nspec[:, :spec.shape[1]] = spec
-#				spec = nspec
-#			hop = (spec.shape[1] - self.input_length) // self.num_chunks
-#			chunks = torch.tensor([spec[:, i*hop:i*hop+self.input_length] for i in range(self.num_chunks)])
-#			specs.append(chunks)
-#		valid_batch = torch.cat(specs, dim=0)
-#		return valid_batch.cuda()
-#
-#	def merge_chunk_prd(self, out):
-#		song_level_out = []
-#		num_iter = out.size(1) // self.num_chunks
-#		for i in range(num_iter):
-#			song_prd = out[i*self.num_chunks:(i+1)*self.num_chunks].mean(dim=0).unsqueeze(0)
-#			song_level_out.append(song_prd)
-#		return torch.cat(song_level_out, dim=0)
-#
-#	def cf_to_emb(self):
-#		embs = []
-#		for i in tqdm.tqdm(range(len(self.valid_ids)//self.batch_size)):
-#			inp = torch.tensor(self.ix_to_cf[i * self.batch_size:(i+1) * self.batch_size]).cuda()
-#			out = self.model.cf_to_embedding(inp).detach().cpu()
-#			embs.append(out)
-#		inp = torch.tensor(self.ix_to_cf[(i+1) * self.batch_size:]).cuda()
-#		out = self.model.cf_to_embedding(inp).detach().cpu()
-#		embs.append(out)
-#		song_embs = torch.cat(embs, dim=0)
-#		return song_embs
-#

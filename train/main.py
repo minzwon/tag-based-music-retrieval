@@ -33,7 +33,7 @@ def main(config):
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-	parser.add_argument('--num_workers', type=int, default=1)
+	parser.add_argument('--num_workers', type=int, default=4)
 	parser.add_argument('--mode', type=str, default='TRAIN', choices=['TRAIN', 'TEST'])
 
 	# model parameters

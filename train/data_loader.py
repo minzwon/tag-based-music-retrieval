@@ -77,18 +77,22 @@ class MyDataset(data.Dataset):
 		return spec, cf
 
 	def get_train_item(self, index):
+		# song embedding
+		if self.is_balanced:
+			tag = self.tags[index % len(self.tags)]
+			song_ix, song_id = random.choice(self.tag_to_ix[tag]).split('//')
+			song_ix = int(song_ix)
+			song_binary = self.ix_to_binary[song_ix]
+		else:
+			song_ix, song_id = random.choice(self.train_ids).split('//')
+			song_ix = int(song_ix)
+			song_binary = self.ix_to_binary[song_ix]
+			tag = random.choices(self.tags, weights=song_binary, k=1)[0]
+
 		# tag embedding
-		tag = self.tags[index % len(self.tags)]
 		tag_binary = self.tag_binaries[tag]
 		tag_emb = self.w2v[tag]
 
-		# song embedding
-		if self.is_balanced:
-			song_ix, song_id = random.choice(self.tag_to_ix[tag]).split('//')
-		else:
-			song_ix, song_id = random.choice(self.train_ids).split('//')
-		song_ix = int(song_ix)
-		song_binary = self.ix_to_binary[song_ix]
 		if self.input_type == 'spec':
 			spec = self.load_spec(song_id)
 			cf = np.array([])
