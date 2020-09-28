@@ -45,6 +45,7 @@ if __name__ == '__main__':
 	parser.add_argument('--w2v_type', type=str, default='google', choices=['google', 'music'])
 	parser.add_argument('--is_balanced', type=bool, default=False)
 	parser.add_argument('--is_weighted', type=bool, default=False)
+	parser.add_argument('--is_subset', type=bool, default=False)
 
 	# training parameters
 	parser.add_argument('--n_epochs', type=int, default=200)

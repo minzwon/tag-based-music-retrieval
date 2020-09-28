@@ -2,6 +2,7 @@ nohup python -u main.py \
 --mode 'TEST' \
 --is_balanced True \
 --is_weighted True \
+--is_subset True \
 --input_type 'hybrid' \
 --w2v_type 'google' \
 --data_path 'YOUR_DATA_PATH/sergio' \

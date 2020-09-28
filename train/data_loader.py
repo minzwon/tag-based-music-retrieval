@@ -9,7 +9,7 @@ from torch.utils import data
 
 
 class MyDataset(data.Dataset):
-	def __init__(self, data_path, split='TRAIN', input_type='spec', input_length=None, num_chunk=16, w2v_type='google', is_balanced=True):
+	def __init__(self, data_path, split='TRAIN', input_type='spec', input_length=None, num_chunk=16, w2v_type='google', is_balanced=True, is_subset=False):
 		self.data_path = data_path
 		self.split = split
 		self.input_type = input_type
@@ -18,25 +18,32 @@ class MyDataset(data.Dataset):
 		self.is_balanced = is_balanced
 		self.w2v_type = w2v_type
 
+		if is_subset:
+			prefix = 'sub_'
+		else:
+			prefix = ''
+		self.prefix = prefix
+
+
 		# load ids
 		if split == 'TRAIN':
-			self.tag_to_ix = pickle.load(open(os.path.join(data_path, 'train_tag_to_ix.pkl'), 'rb'))
-			self.train_ids = np.load(os.path.join(data_path, 'train_ids.npy'))
+			self.tag_to_ix = pickle.load(open(os.path.join(data_path, prefix+'train_tag_to_ix.pkl'), 'rb'))
+			self.train_ids = np.load(os.path.join(data_path, prefix+'train_ids.npy'))
 			self.get_tag_binaries()
 		elif split == 'VALID':
-			self.eval_ids = np.load(os.path.join(data_path, 'valid_ids.npy'))
+			self.eval_ids = np.load(os.path.join(data_path, prefix+'valid_ids.npy'))
 		elif split == 'TEST':
-			self.eval_ids = np.load(os.path.join(data_path, 'test_ids.npy'))
+			self.eval_ids = np.load(os.path.join(data_path, prefix+'test_ids.npy'))
 
 		# load binaries
-		self.ix_to_binary = np.load(os.path.join(data_path, 'binaries.npy'))
+		self.ix_to_binary = np.load(os.path.join(data_path, prefix+'binaries.npy'))
 
 		# load tag embedding
 		self.load_tag_emb()
 
 		# load collaborative filtering embedding
 		if input_type != 'spec':
-			self.cf = np.load(os.path.join(data_path, 'ix_to_cf.npy'))
+			self.cf = np.load(os.path.join(data_path, prefix+'ix_to_cf.npy'))
 
 	def get_tag_binaries(self):
 		eye = np.eye(len(self.tag_to_ix))
@@ -45,7 +52,7 @@ class MyDataset(data.Dataset):
 			self.tag_binaries[tag] = eye[i]
 
 	def load_tag_emb(self):
-		self.tags = np.load(os.path.join(self.data_path, 'tags.npy'))
+		self.tags = np.load(os.path.join(self.data_path, self.prefix+'tags.npy'))
 		self.w2v = pickle.load(open(os.path.join(self.data_path, '%s_emb.pkl'%self.w2v_type), 'rb'))
 
 	def load_cf(self, song_ix):

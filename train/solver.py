@@ -42,6 +42,11 @@ class Solver(LightningModule):
 		self.w2v_type = config.w2v_type
 		self.is_balanced = config.is_balanced
 		self.is_weighted = config.is_weighted
+		self.is_subset = config.is_subset
+		if config.is_subset:
+			self.prefix = 'sub_'
+		else:
+			self.prefix = ''
 
 		# load validation data
 		self.load_eval_data(config.data_path, config.w2v_type, config.mode)
@@ -65,17 +70,18 @@ class Solver(LightningModule):
 		self.word_emb = torch.tensor([emb_dict[key] for key in emb_dict.keys()]).cuda()
 		# get valid data
 		if mode == 'TRAIN':
-			self.eval_ids = np.load(os.path.join(data_path, 'valid_ids.npy'))
+			self.eval_ids = np.load(os.path.join(data_path, self.prefix+'valid_ids.npy'))
 		elif mode == 'TEST':
-			self.eval_ids = np.load(os.path.join(data_path, 'test_ids.npy'))
-		self.tags = np.load(os.path.join(data_path, 'tags.npy'))
+			self.eval_ids = np.load(os.path.join(data_path, self.prefix+'test_ids.npy'))
+		self.tags = np.load(os.path.join(data_path, self.prefix+'tags.npy'))
 
 		# preprocess
-		ix_to_cf = np.load(os.path.join(data_path, 'ix_to_cf.npy'))
-		binaries = np.load(os.path.join(data_path, 'binaries.npy'))
+		binaries = np.load(os.path.join(data_path, self.prefix+'binaries.npy'))
 		indice = [int(line.split('//')[0]) for line in self.eval_ids]
 		self.ground_truth = binaries[indice]
-		self.ix_to_cf = ix_to_cf[indice]
+		if self.input_type != 'spec':
+			ix_to_cf = np.load(os.path.join(data_path, self.prefix+'ix_to_cf.npy'))
+			self.ix_to_cf = ix_to_cf[indice]
 
 	def configure_optimizers(self):
 		optimizer = torch.optim.Adam(self.model.parameters(), lr=self.lr, weight_decay=1e-4)
@@ -90,19 +96,20 @@ class Solver(LightningModule):
 
 	def train_dataloader(self):
 		return DataLoader(dataset=MyDataset(self.data_path, split='TRAIN', input_type=self.input_type, 
-											input_length=self.input_length, w2v_type=self.w2v_type, is_balanced=self.is_balanced), 
+											input_length=self.input_length, w2v_type=self.w2v_type, 
+											is_balanced=self.is_balanced, is_subset=self.is_subset), 
 						  batch_size=self.batch_size, shuffle=True, drop_last=False, num_workers=self.num_workers)
 
 	def val_dataloader(self):
 		return DataLoader(dataset=MyDataset(self.data_path, split='VALID', input_type=self.input_type,
 											input_length=self.input_length, num_chunk=self.num_chunk,
-											w2v_type=self.w2v_type, is_balanced=self.is_balanced),
+											w2v_type=self.w2v_type, is_balanced=self.is_balanced, is_subset=self.is_subset),
 						  batch_size=self.batch_size//self.num_chunk, shuffle=False, drop_last=False, num_workers=self.num_workers)
 
 	def test_dataloader(self):
 		return DataLoader(dataset=MyDataset(self.data_path, split='TEST', input_type=self.input_type,
 											input_length=self.input_length, num_chunk=self.num_chunk,
-											w2v_type=self.w2v_type, is_balanced=self.is_balanced),
+											w2v_type=self.w2v_type, is_balanced=self.is_balanced, is_subset=self.is_subset),
 						  batch_size=self.batch_size//self.num_chunk, shuffle=False, drop_last=False, num_workers=self.num_workers)
 
 	def training_step(self, batch, batch_idx):

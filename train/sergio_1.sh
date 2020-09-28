@@ -1,6 +1,8 @@
+mkdir checkpoints/b-w-cfp-google
 nohup python -u main.py \
 --is_balanced True \
 --is_weighted True \
+--is_subset True \
 --input_type 'cf' \
 --w2v_type 'google' \
 --data_path 'YOUR_DATA_PATH/sergio' \
