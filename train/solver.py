@@ -66,7 +66,7 @@ class Solver(LightningModule):
 
 	def load_eval_data(self, data_path, w2v_type, mode):
 		# get w2v word embedding
-		emb_dict = pickle.load(open(os.path.join(data_path, '%s_emb.pkl'%w2v_type), 'rb'))
+		emb_dict = pickle.load(open(os.path.join(data_path, self.prefix+'%s_emb.pkl'%w2v_type), 'rb'))
 		self.word_emb = torch.tensor([emb_dict[key] for key in emb_dict.keys()]).cuda()
 		# get valid data
 		if mode == 'TRAIN':
