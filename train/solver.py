@@ -115,7 +115,7 @@ class Solver(LightningModule):
 	def training_step(self, batch, batch_idx):
 		tag, spec, cf, tag_binary, song_binary = batch
 		tag_emb, song_emb = self.model.forward(tag, spec, cf)
-		anchor, positive, negative = self.triplet_sampling(tag_emb, song_emb, song_binary, tag_binary)
+		anchor, positive, negative = self.triplet_sampling(tag_emb, song_emb, tag_binary, song_binary)
 		loss = self.train_loss(anchor, positive, negative)
 		logs = {"loss": loss}
 		return {"loss": loss, "log": logs}
