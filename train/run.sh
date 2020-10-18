@@ -1,11 +1,11 @@
 nohup python -u main.py \
---is_weighted True \
 --is_balanced True \
+--is_weighted True \
 --is_subset True \
---input_type 'spec' \
+--input_type 'cf' \
 --w2v_type 'google' \
 --data_path '/home/minz.s.won/data/pandora' \
---model_save_path './checkpoints/b-w-sub-spec-google' \
+--model_save_path './checkpoints/b-w-sub-cf-google' \
 --neptune_project 'minzwon/pandora' \
 --neptune_api_key 'eyJhcGlfYWRkcmVzcyI6Imh0dHBzOi8vdWkubmVwdHVuZS5haSIsImFwaV91cmwiOiJodHRwczovL3VpLm5lcHR1bmUuYWkiLCJhcGlfa2V5IjoiZWJkZGQzNTctNTllZC00ZDg0LTlkZTMtMWZkYThjZjRkMDQwIn0=' \
-> 'logs/b-w-sub-spec-google.out' &
+> 'logs/b-w-sub-cf-google.out' &

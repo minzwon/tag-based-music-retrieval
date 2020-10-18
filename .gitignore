@@ -2,4 +2,6 @@
 *.ckpt
 *.out
 */__pycache__/*
+old_checkpoints
+old_logs
 
