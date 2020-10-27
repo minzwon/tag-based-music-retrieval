@@ -83,7 +83,7 @@ To be updated.
 
 
 ## Model overview
-<img src="figs/model.pdf" width="700">
+<img src="figs/model.png" width="700">
 
 (a) Our triplet network. For a given anchor tag *y*, the model maps a positive song *x_p* to be closer than a negative song *x_n* from the anchor in the multimodal embedding space.
 
