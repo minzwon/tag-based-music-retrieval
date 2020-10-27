@@ -33,11 +33,11 @@ def main(config):
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-	parser.add_argument('--num_workers', type=int, default=4)
+	parser.add_argument('--num_workers', type=int, default=0)
 	parser.add_argument('--mode', type=str, default='TRAIN', choices=['TRAIN', 'TEST'])
 
 	# model parameters
-	parser.add_argument('--batch_size', type=int, default=168)
+	parser.add_argument('--batch_size', type=int, default=128)
 	parser.add_argument('--num_chunk', type=int, default=8)
 	parser.add_argument('--input_length', type=int, default=173)
 	parser.add_argument('--margin', type=float, default=0.4)
