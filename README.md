@@ -1,9 +1,9 @@
 # Multimodal Metric Learning for Tag-based Music Retrieval
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-PyTorch Lightning implementation of multimodal metric learning model for tag-based music retrieval :notes:
+⚡️PyTorch Lightning implementation of multimodal metric learning model for tag-based music retrieval.
 
-Also, we release [*MSD500*](#dataset) which is a manually cleaned version of the Million Song Dataset (MSD) with 500 tags and user taste profiles.
+Also, we release [*MSD500*](#dataset) which is a manually cleaned version of the Million Song Dataset (MSD) with 500 tags and Echonest User Taste Profiles.
 
 ## Reference
 
@@ -92,19 +92,21 @@ python -u main.py --mode 'TEST' --PARAMETER YOUR_PARAMETER
 ## Dataset
 ### 1. Cleanup process
 - Filter out all tracks not included in the MSD Taste Profile.
-- Filter out all tag annotations with a Last.fm tag score of 60 (Last.fm tags in the original dataset come with a score between 0 and 100).
+- Filter out all tag annotations with a Last.fm tag score of 50 (Last.fm tags in the original dataset come with a score between 0 and 100).
 - Filter out all tracks with more than 20 tags (we assume that annotations in tracks with too many tags are less reliable).
 - Preprocessing of tags: remove punctuation, normalize expressions (e.g., and, \&, 'n'), and remove irrelevant suffixes (e.g., music, song, tag).
-- Group all tags with the same preprocessed lemma and name the group with the most common of the involved tags.
+- Group all tags with the same preprocessed lemma and name the group with the most common of the involved tags (e.g., [rock music, rock, rock songs, rock tag] -> 'rock').
 - Select all tag groups with annotations for at least 100 tracks.
 
 
 ### 2. How to download
-You can simply download from this [Google Drive link]().
+You can simply download from this [Google Drive link](https://drive.google.com/file/d/1N1oaaTBwV0MOVV207yecPfYWGxtK9qC0/view?usp=sharing).
 
 ```
 tar -zxvf MSD500.tar.gz
 ```
+
+Due to security/privacy issues, our in-house user-item embeddings are not included.
 
 ## Model overview
 <img src="figs/model.png" width="700">
@@ -121,7 +123,7 @@ tar -zxvf MSD500.tar.gz
 
 ## Experimental results
 ### 1. Sampling matters
-We tried three different triplet sampling methods. Our baseline is random sampling. But with random sampling, minor tags have less chance to be sampled during the training. To alleviate this, we uniformly select tags first and sample positive and negative items (balanced sampling). Further, we added the weighted sampling method ([reference](https://arxiv.org/abs/1706.07567)) to sample hard, semi-hard, and soft negatives efficiently. As shown in the table below, balanced-weighted sampling showed the best result.
+We tried three different triplet sampling methods. Our baseline is random sampling. But with random sampling, minor tags have less chance to be sampled during the training. To alleviate this, we uniformly select tags first, then sample positive and negative items (balanced sampling). Further, we added the weighted sampling method ([reference](https://arxiv.org/abs/1706.07567)) to sample hard, semi-hard, and soft negative examples efficiently. As shown in the table below, balanced-weighted sampling showed the best result.
 
 <img src="figs/Tab1.png" width="400">
 
@@ -129,21 +131,24 @@ We tried three different triplet sampling methods. Our baseline is random sampli
 We believe certain groups of tags are more related to acoustic information while others may be more culturally relevant. A tag *piano*, for example, can be predicted using the user-item matrix if there is a specific group of users who heavily listened to songs with piano. However, originally, the tag *piano* is associated with acoustic information. When there is a song beloved by the aforementioned user group, if we only use cultural information, the song can be regarded as piano music even when no piano can be acoustically perceived in the song. 
 
 As another example, a tag *K-pop* can be predicted based on acoustic information since there are common acoustic characteristics of *K-pop*. However, if the song is not from Korea and is not being consumed in Korea, it should not be tagged as *K-pop*. 
-To investigate the capability of two different information sources, we train our metric learning model with cultural information only and acoustic information only.
+To investigate the capability of two different information sources, we train our metric learning model with cultural information only (Cul-E, Cul-I) and acoustic information only (Acoustic). **-E** stands for EchoNestUserTasteProfile and **-I** stands for in-house data.
 
 <img src="figs/Tab2.png" width="400">
 
 <img src="figs/category.png" width="400">
 
-In general, the acoustic model outperforms the cultural model (Acoustic > Cul-E). However, if we take a closer look at category-wise performance, acoustic model shows its strength in *genre* and *mood/character* while cultural model shows the strength in *location* and *language/origin* tags.
+In general, the acoustic model outperforms the cultural model (Acoustic > Cul-E). However, if we take a closer look at category-wise performance, acoustic model shows its strength in *genre* and *mood/character* while cultural model shows the strength in *location* and *language/origin* tags. This supports our hypothesis that the source of information matters for the tag prediction.
 
-But the foremost important factors are the size and quality of available data. As shown in the table, with our inhouse user-item information (Cul-I), the cultural model outperforms the acoustic model. It outperformed in every category. Since our inhouse data have 100B explicit user feedbacks, the cultural model becomes more powerful than using relatively small and implicitly created data.
+But the foremost important factors are the size and quality of available data. As shown in the table above, with our inhouse user-item information (Cul-I), the cultural model outperforms the acoustic model. It outperformed in every category including *genre*, *mood/character*, and even *instruments*. Since our inhouse data have 100B explicit user feedbacks, the cultural model becomes more powerful than using relatively small and implicitly created data (Cul-E).
+
+A simple concatenation of cultural and acoustic information (Concat) did not improve. We leave this hybrid method as a future challenge.
+
 ### 3. Domain-specific word embeddings
-We compare two different word embeddings by checking nearest neighbors of the given tag. One is pretrained with Google News while our proposed one in pretrained with more musical text, such as Amazon reviews, music biographies, and Wikipedia pages about theory and music genres.
+We compare two different word embeddings by checking nearest neighbors of the given tag. One is pretrained with Google News while our proposed one in pretrained with more musical text, such as Amazon reviews, music biographies, and Wikipedia pages about theory and music genres. This domain-specific word embeddings are included in our [dataset](#dataset).
 
 <img src="figs/Tab3.png" width="500">
 
-- Some music genres (jungle, house, country, metal) have different meaning from our daily vocabulary. The proposed domain-specific word embeddings successfully catch the musical context. 
+- Some music genres (jungle, house, country, metal) have different meaning from our daily vocabulary. The proposed domain-specific word embeddings successfully catch the musical context. Music-related words are emboldened.
 - *Chill* means relaxing mood in musical context. Domain-specific word embeddings could capture similar moods while general word embeddings could not.
 - Also, for a given tag *Brazilian*, domain-specific one successfully returns *mpb (música popular brasileira)*, *bossa nova*, and *samba*.
 - Some musical bi-grams do not existing in the general word embeddings since they are less frequent in news. But the domain-specific word embeddings include such bi-grams and tri-grams (e.g., *smooth jazz* and *deep house*).
