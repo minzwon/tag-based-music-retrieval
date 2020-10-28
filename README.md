@@ -144,7 +144,7 @@ But the foremost important factors are the size and quality of available data. A
 A simple concatenation of cultural and acoustic information (Concat) did not improve. We leave this hybrid method as a future challenge.
 
 ### 3. Domain-specific word embeddings
-We compare two different word embeddings by checking nearest neighbors of the given tag. One is pretrained with Google News while our proposed one in pretrained with more musical text, such as Amazon reviews, music biographies, and Wikipedia pages about theory and music genres. This domain-specific word embeddings are included in our [dataset](#dataset).
+We compare two different word embeddings by checking nearest neighbors of the given tag. One is pretrained with Google News while our proposed domain-specific one is pretrained with more musical text, such as Amazon reviews, music biographies, and Wikipedia pages about theory and music genres. This domain-specific word embeddings are included in our [dataset](#dataset).
 
 <img src="figs/Tab3.png" width="500">
 
