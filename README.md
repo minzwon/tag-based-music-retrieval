@@ -3,7 +3,7 @@
 
 ⚡️ PyTorch Lightning implementation of multimodal metric learning model for tag-based music retrieval.
 
-Also, we release [*MSD500*](#dataset) which is a manually cleaned version of the Million Song Dataset (MSD) with 500 tags and Echonest User Taste Profiles.
+Also, we release [*MSD500*](#dataset) which is a manually cleaned version of the Million Song Dataset (MSD) with 500 tags and EchoNest User Taste Profiles.
 
 ## Reference
 
@@ -30,7 +30,7 @@ pip install -r requirements.txt
 
 ## Preprocessing
 ### Data split
-Our data split is already included in the [dataset](#dataset) that we provide. The following preprocessing steps are for the researchers who want to customize their data splits.
+Our data split is already included in the [dataset](#dataset) that we provide. Check `reproducible_splits.tar.gz` from the link. The following preprocessing steps are for the researchers who want to customize their data splits.
 
 ```
 python -u step1_data_split.py run YOUR_DATA_PATH    TOP_N_TAGS    MINIMUM_NUMBER_OF_TAGS_IN_EACH_SPLIT
@@ -100,11 +100,13 @@ python -u main.py --mode 'TEST' --PARAMETER YOUR_PARAMETER
 
 
 ### 2. How to download
-You can simply download from this [Google Drive link](https://drive.google.com/file/d/1N1oaaTBwV0MOVV207yecPfYWGxtK9qC0/view?usp=sharing).
+You can simply download from this [Google Drive link](https://drive.google.com/drive/folders/1Y_XY4vdiVvqvEoe3HQcDx3wawBEgsl0o?usp=sharing).
 
-```
-tar -zxvf MSD500.tar.gz
-```
+- `msd500.tar.gz`: Manually cleaned subset of the MSD. Columns of `track_tags.tsv` are [song\_id, original\_tag, cleaned\_tag, tag\_category, score].
+- `music_w2v.tar.gz`: Domain-specific word embeddings pretrained with music-related text.
+- `reproducible_splits.tar.gz`: Data splits used in our experiments. You can skip preprocessing steps with this. Also you can skip other files.
+- `user_item_embs.tar.gz`: Collaborative filtering embeddings of EchoNest User Taste Profile.
+
 
 Due to security/privacy issues, our in-house user-item embeddings are not included.
 
