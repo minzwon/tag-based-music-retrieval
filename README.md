@@ -104,7 +104,7 @@ You can simply download from this [Google Drive link](https://drive.google.com/d
 
 - `msd500.tar.gz`: Manually cleaned subset of the MSD. Columns of `track_tags.tsv` are [song\_id, original\_tag, cleaned\_tag, tag\_category, score].
 - `music_w2v.tar.gz`: Domain-specific word embeddings pretrained with music-related text.
-- `reproducible_splits.tar.gz`: Data splits used in our experiments. You can skip preprocessing steps with this. Also you can skip other files.
+- `reproducible_splits.tar.gz`: Data splits used in our experiments (MSD100 and MSD50). You can skip preprocessing steps with this. Also you can skip other files.
 - `user_item_embs.tar.gz`: Collaborative filtering embeddings of EchoNest User Taste Profile.
 
 
