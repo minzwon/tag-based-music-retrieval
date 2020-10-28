@@ -3,7 +3,7 @@
 
 PyTorch Lightning implementation of multimodal metric learning model for tag-based music retrieval :notes:
 
-Also, we release *MSD500* which is a manually cleaned version of the Million Song Dataset (MSD) with 500 tags and user taste profiles.
+Also, we release [*MSD500*](#dataset) which is a manually cleaned version of the Million Song Dataset (MSD) with 500 tags and user taste profiles.
 
 ## Reference
 
@@ -30,7 +30,7 @@ pip install -r requirements.txt
 
 ## Preprocessing
 ### Data split
-Our data split is already included in the dataset that we provide ([download]()). The following preprocessing steps are for the researchers who want to customize their data splits.
+Our data split is already included in the [dataset](#dataset) that we provide. The following preprocessing steps are for the researchers who want to customize their data splits.
 
 ```
 python -u step1_data_split.py run YOUR_DATA_PATH    TOP_N_TAGS    MINIMUM_NUMBER_OF_TAGS_IN_EACH_SPLIT
@@ -51,7 +51,9 @@ number of Mel bands: 128
 ## Training
 You can find an example from `run.sh`.
 
-`python -u main.py --mode 'TRAIN' --PARAMETER YOUR_PARAMETER`
+```
+python -u main.py --mode 'TRAIN' --PARAMETER YOUR_PARAMETER
+```
 
 Options
 
@@ -83,9 +85,11 @@ Options
 ## Evaluation
 You can find an example from `eval.sh`.
 
-`python -u main.py --mode 'TEST' --PARAMETER YOUR_PARAMETER`
+```
+python -u main.py --mode 'TEST' --PARAMETER YOUR_PARAMETER
+```
 
-## Dataset
+##Dataset
 ### 1. Cleanup process
 - Filter out all tracks not included in the MSD Taste Profile.
 - Filter out all tag annotations with a Last.fm tag score of 60 (Last.fm tags in the original dataset come with a score between 0 and 100).
@@ -98,6 +102,9 @@ You can find an example from `eval.sh`.
 ### 2. How to download
 You can simply download from this [Google Drive link]().
 
+```
+tar -zxvf MSD500.tar.gz
+```
 
 ## Model overview
 <img src="figs/model.png" width="700">
@@ -109,6 +116,7 @@ You can simply download from this [Google Drive link]().
 (c) Cultural song embedding branch *S_cultural(x)*. We used collaborative filtering.
 
 (d) Acoustic song embedding branch *S_acoustic(x)*. We used short-chunk CNN ([reference](https://arxiv.org/abs/2006.00751)).
+
 
 
 ## Experimental results
