@@ -1,7 +1,7 @@
 # Multimodal Metric Learning for Tag-based Music Retrieval
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-⚡️PyTorch Lightning implementation of multimodal metric learning model for tag-based music retrieval.
+⚡️ PyTorch Lightning implementation of multimodal metric learning model for tag-based music retrieval.
 
 Also, we release [*MSD500*](#dataset) which is a manually cleaned version of the Million Song Dataset (MSD) with 500 tags and Echonest User Taste Profiles.
 
