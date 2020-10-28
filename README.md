@@ -29,13 +29,29 @@ pip install -r requirements.txt
 
 
 ## Preprocessing
-To be updated.
+### Data split
+Our data split is already included in the dataset that we provide ([download]()). The following preprocessing steps are for the researchers who want to customize their data splits.
+
+```
+python -u step1_data_split.py run YOUR_DATA_PATH    TOP_N_TAGS    MINIMUM_NUMBER_OF_TAGS_IN_EACH_SPLIT
+python -u step2_word_embedding.py run YOUR_DATA_PATH
+python -u step3_taste_profile.py run YOUR_DATA_PATH
+```
+### Audio preprocessing (Mel spectrogram)
+```
+sampling rate: 22050Hz
+FFT window: Hanning
+window length: 1024
+hop size: 512
+number of Mel bands: 128
+```
+
 
 
 ## Training
-Please check an example from `run.sh`.
+You can find an example from `run.sh`.
 
-`python -u main.py --PARAMETER YOUR_PARAMETER`
+`python -u main.py --mode 'TRAIN' --PARAMETER YOUR_PARAMETER`
 
 Options
 
@@ -65,8 +81,9 @@ Options
 ```
 
 ## Evaluation
-To be updated.
+You can find an example from `eval.sh`.
 
+`python -u main.py --mode 'TEST' --PARAMETER YOUR_PARAMETER`
 
 ## Dataset
 ### 1. Cleanup process
@@ -79,7 +96,7 @@ To be updated.
 
 
 ### 2. How to download
-To be updated.
+You can simply download from this [Google Drive link]().
 
 
 ## Model overview
@@ -114,7 +131,7 @@ In general, the acoustic model outperforms the cultural model (Acoustic > Cul-E)
 
 But the foremost important factors are the size and quality of available data. As shown in the table, with our inhouse user-item information (Cul-I), the cultural model outperforms the acoustic model. It outperformed in every category. Since our inhouse data have 100B explicit user feedbacks, the cultural model becomes more powerful than using relatively small and implicitly created data.
 ### 3. Domain-specific word embeddings
-We compare two different word embeddings by checking nearest neighbors of the given tag. One is pretrained with Google News while our proposed one in pretrained with more musical text ([reference](https://competitions.codalab.org/competitions/17119\#learn\_the\_details-terms\_and\_conditions)), such as Amazon reviews, music biographies, and Wikipedia pages about theory and music genres.
+We compare two different word embeddings by checking nearest neighbors of the given tag. One is pretrained with Google News while our proposed one in pretrained with more musical text, such as Amazon reviews, music biographies, and Wikipedia pages about theory and music genres.
 
 <img src="figs/Tab3.png" width="500">
 
@@ -153,4 +170,11 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
+
+## Pretrained models
+Available upon request. 
+
+minz.won@upf.edu
+
+🚫 I can only share pretrained models using public data. I do not share the model trained with our in-house data.
 
