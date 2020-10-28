@@ -134,6 +134,3 @@ class Solver(object):
 		ap = metrics.average_precision_score(self.ground_truth, sim_scores.T, average=None)
 		return ap
 
-#s = Solver('/ssd2/dataset/msd', 'model/model_266.pth', 64)
-#p_ks, roc_aucs, aps, sim_scores = s.evaluation()
-

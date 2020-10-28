@@ -1,5 +1,4 @@
 python -u main.py \
---is_subset True \
 --mode 'TEST' \
 --input_type 'cf' \
 --w2v_type 'google' \
