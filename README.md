@@ -139,7 +139,7 @@ To investigate the capability of two different information sources, we train our
 
 In general, the acoustic model outperforms the cultural model (Acoustic > Cul-E). However, if we take a closer look at category-wise performance, acoustic model shows its strength in *genre* and *mood/character* while cultural model shows the strength in *location* and *language/origin* tags. This supports our hypothesis that the source of information matters for the tag prediction.
 
-But the foremost important factors are the size and quality of available data. As shown in the table above, with our inhouse user-item information (Cul-I), the cultural model outperforms the acoustic model. It outperformed in every category including *genre*, *mood/character*, and even *instruments*. Since our inhouse data have 100B explicit user feedbacks, the cultural model becomes more powerful than using relatively small and implicitly created data (Cul-E).
+But the foremost important factors are the size and quality of available data. As shown in the table above, with our in-house user-item information (Cul-I), the cultural model outperforms the acoustic model. It outperformed in every category including *genre*, *mood/character*, and even *instruments*. Since our in-house data have 100B explicit user feedbacks, the cultural model becomes more powerful than using relatively small and implicitly created data (Cul-E).
 
 A simple concatenation of cultural and acoustic information (Concat) did not improve. We leave this hybrid method as a future challenge.
 
