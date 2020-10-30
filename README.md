@@ -158,7 +158,12 @@ We compare two different word embeddings by checking nearest neighbors of the gi
 
 ## Citation
 ```
-To be updated.
+@article{won2020multimodal,
+  title={Multimodal Metric Learning for Tag-based Music Retrieval},
+  author={Won, Minz and Oramas, Sergio and Nieto, Oriol and Gouyon, Fabien and Serra, Xavier},
+  journal={arXiv preprint arXiv:2011.00000},
+  year={2020}
+}
 ```
 
 ## License
