@@ -7,7 +7,7 @@ Also, we release [*MSD500*](#dataset) which is a manually cleaned version of the
 
 ## Reference
 
-**Multimodal Metric Learning for Tag-based Music Retrieval**, Submitted to ICASSP 2021 [[arxiv](https://arxiv.org/abs/)]
+**Multimodal Metric Learning for Tag-based Music Retrieval**, Submitted to ICASSP 2021 [[arxiv](https://arxiv.org/abs/2010.16030)]
 
 -- Minz Won, Sergio Oramas, Oriol Nieto, Fabien Gouyon, Xavier Serra
 
@@ -161,7 +161,7 @@ We compare two different word embeddings by checking nearest neighbors of the gi
 @article{won2020multimodal,
   title={Multimodal Metric Learning for Tag-based Music Retrieval},
   author={Won, Minz and Oramas, Sergio and Nieto, Oriol and Gouyon, Fabien and Serra, Xavier},
-  journal={arXiv preprint arXiv:2011.00000},
+  journal={arXiv preprint arXiv:2010.16030},
   year={2020}
 }
 ```
