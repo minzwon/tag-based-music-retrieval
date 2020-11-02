@@ -153,7 +153,7 @@ We compare two different word embeddings by checking nearest neighbors of the gi
 - Some music genres (jungle, house, country, metal) have different meaning from our daily vocabulary. The proposed domain-specific word embeddings successfully catch the musical context. Music-related words are emboldened.
 - *Chill* means relaxing mood in musical context. Domain-specific word embeddings could capture similar moods while general word embeddings could not.
 - Also, for a given tag *Brazilian*, domain-specific one successfully returns *mpb (música popular brasileira)*, *bossa nova*, and *samba*.
-- Some musical bi-grams do not existing in the general word embeddings since they are less frequent in news. But the domain-specific word embeddings include such bi-grams and tri-grams (e.g., *smooth jazz* and *deep house*).
+- Some musical bi-grams do not exist in the general word embeddings since they are less frequent in news. But the domain-specific word embeddings include such bi-grams and tri-grams (e.g., *smooth jazz* and *deep house*).
 
 
 ## Citation
